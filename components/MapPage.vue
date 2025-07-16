@@ -23,15 +23,11 @@ onMounted(async () => {
 })
 
 // Method ini buat dipanggil dari luar komponen
-function moveTo(lat, lng) {
-  if (map && marker) {
-    map.setView([lat, lng], 10)
-    marker.setLatLng([lat, lng])
-      .bindPopup(`Lat: ${lat}, Lng: ${lng}`)
-      .openPopup()
-  }
+
+function setLocation(location) {
+  marker.value.setLatLng([location.latitude, location.longitude]).bindPopup(location.username).openPopup()
+
+  map.value.setView([location.latitude, location.longitude], 13)
 }
-
-
-defineExpose({ moveTo })
+defineExpose({ setLocation })
 </script>
