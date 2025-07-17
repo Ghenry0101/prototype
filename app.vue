@@ -1,16 +1,20 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { fetchAllLocations } from './composables/useApi'
+import { db, updateDoc, doc } from './services/firebase'
+import { getDoc } from 'firebase/firestore'
 
 const locations = ref([])
 const users = ref([])
 const mapPageRef = ref(null)
+const activeUser = ref(null)
+let intervalId = null
 
 onMounted(async () => {
   const responseData = await fetchAllLocations()
-  console.log(responseData)
-  users.value = responseData.locations
-  locations.value = responseData.locations
+  users.value = responseData.locations.filter(item => item.username)
+  locations.value = users.value
+  console.log('responseData', responseData)
 
   // Ambil hanya username yang tidak kosong
   locations.value = responseData.locations.filter(item => item.username)
@@ -18,14 +22,51 @@ onMounted(async () => {
     username: item.username,
     latitude: item.latitude,
     longitude: item.longitude,
-    triggered: true
+    triggered: item.triggered
   }))
+
+
+  // ⏰ Otomatis update setiap 5 detik ke user yang terakhir diklik
+intervalId = setInterval(async () => {
+  if (activeUser.value && mapPageRef.value) {
+    const docRef = doc(db, 'locations', activeUser.value.username)
+    const snapshot = await getDoc(docRef)
+    if (snapshot.exists()) {
+      const data = snapshot.data()
+      if (data.latitude && data.longitude) {
+        const updatedUser = {
+          username: data.username,
+          latitude: data.latitude,
+          longitude: data.longitude,
+          triggered: data.triggered
+        }
+        mapPageRef.value.setLocation(updatedUser)
+      } else {
+        console.log('Data latitude / longitude kosong:', data)
+      }
+    }
+  }
+}, 5000)
 })
 
+onBeforeUnmount(() => {
+  if (intervalId) clearInterval(intervalId)
+})
+
+// 🖱️ Saat klik user, aktifkan user itu
 async function handleClickUser(user) {
-  if (!user.latitude || !user.longitude) return
-  mapPageRef.value.setLocation(user)
+  try {
+    if (!user.latitude || !user.longitude) return
+    const docRef = doc(db, 'locations', user.username)
+    await updateDoc(docRef, { Triggered: true })
+    activeUser.value = user
+    mapPageRef.value.setLocation(user)
+  } catch (error) {
+    console.log('error click', error)
+  }
 }
+
+
 </script>
 
 <template>
@@ -36,12 +77,13 @@ async function handleClickUser(user) {
       <div class="overflow-auto flex-grow">
         <ul>
           <li 
+          
             v-for="user in users" 
             :key="user.username" 
             @click="handleClickUser(user)"
             class="p-2 cursor-pointer hover:bg-gray-100"
           >
-            {{ user.username }}
+            {{ user.username }} 
           </li>
         </ul>
       </div>
