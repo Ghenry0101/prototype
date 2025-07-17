@@ -18,6 +18,7 @@ onMounted(async () => {
     username: item.username,
     latitude: item.latitude,
     longitude: item.longitude,
+    triggered: true
   }))
 })
 
