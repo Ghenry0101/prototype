@@ -5,6 +5,9 @@
 <script setup>
 import { ref, onMounted, defineExpose } from 'vue'
 import 'leaflet/dist/leaflet.css'
+import { doc, getDoc } from 'firebase/firestore'
+import { db } from '@/services/firebase' // atau path sesuai punyamu
+
 
 let map = ref(null)
 const marker = ref(null)
@@ -20,6 +23,18 @@ onMounted(async () => {
     marker.value = L.marker([-6.2, 106.816666]).addTo(map)
       .bindPopup('Jakarta')
   }
+  try {
+  const testRef = doc(db, 'locations', 'dzul')
+  const snapshot = await getDoc(testRef)
+  if (snapshot.exists()) {
+    console.log('✅ Firebase Firestore Connected. Data:', snapshot.data())
+  } else {
+    console.log('⚠️ Connected but Document not found.')
+  }
+} catch (e) {
+  console.error('❌ Firestore connection failed:', e)
+}
+
 })
 
 // Method ini buat dipanggil dari luar komponen

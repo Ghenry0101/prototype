@@ -2,7 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { fetchAllLocations } from './composables/useApi'
 import { db, updateDoc, doc } from './services/firebase'
-import { getDoc } from 'firebase/firestore'
+import { getDoc, onSnapshot, collection } from 'firebase/firestore'
 
 const locations = ref([])
 const users = ref([])
@@ -15,6 +15,18 @@ onMounted(async () => {
   users.value = responseData.locations.filter(item => item.username)
   locations.value = users.value
   console.log('responseData', responseData)
+
+    try {
+  const testRef = doc(db, 'locations', 'dzul')
+  const snapshot = await getDoc(testRef)
+  if (snapshot.exists()) {
+    console.log('✅ Firebase Firestore Connected. Data:', snapshot.data())
+  } else {
+    console.log('⚠️ Connected but Document not found.')
+  }
+} catch (e) {
+  console.error('❌ Firestore connection failed:', e)
+}
 
   // Ambil hanya username yang tidak kosong
   locations.value = responseData.locations.filter(item => item.username)
@@ -47,11 +59,15 @@ intervalId = setInterval(async () => {
     }
   }
 }, 5000)
+
+
 })
 
 onBeforeUnmount(() => {
   if (intervalId) clearInterval(intervalId)
 })
+
+
 
 // 🖱️ Saat klik user, aktifkan user itu
 async function handleClickUser(user) {
@@ -65,6 +81,7 @@ async function handleClickUser(user) {
     console.log('error click', error)
   }
 }
+
 
 
 </script>
