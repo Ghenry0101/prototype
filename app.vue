@@ -1,100 +1,113 @@
 <script setup>
-import { onMounted, ref } from 'vue'
-import { fetchAllLocations } from './composables/useApi'
-import { db, updateDoc, doc } from './services/firebase'
-import { getDoc, onSnapshot, collection } from 'firebase/firestore'
+import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
+import { db } from './services/firebase'
+import { onSnapshot, collection, doc } from 'firebase/firestore'
 
-const locations = ref([])
 const users = ref([])
 const mapPageRef = ref(null)
-const activeUser = ref(null)
-let intervalId = null
+const is_realtime = ref(true)
+let unsubscribe = null
 
-onMounted(async () => {
-  const responseData = await fetchAllLocations()
-  users.value = responseData.locations.filter(item => item.username)
-  locations.value = users.value
-  console.log('responseData', responseData)
 
-    try {
-  const testRef = doc(db, 'locations', 'dzul')
-  const snapshot = await getDoc(testRef)
-  if (snapshot.exists()) {
-    console.log('✅ Firebase Firestore Connected. Data:', snapshot.data())
-  } else {
-    console.log('⚠️ Connected but Document not found.')
+// Bisa buat semua user, bisa buat 1 user
+const startRealtime = (username = null) => {
+  if (unsubscribe) {
+    unsubscribe()
+    unsubscribe = null
   }
-} catch (e) {
-  console.error('❌ Firestore connection failed:', e)
-}
 
-  // Ambil hanya username yang tidak kosong
-  locations.value = responseData.locations.filter(item => item.username)
-  users.value = locations.value.map(item => ({
-    username: item.username,
-    latitude: item.latitude,
-    longitude: item.longitude,
-    triggered: item.triggered
-  }))
-
-
-  // ⏰ Otomatis update setiap 5 detik ke user yang terakhir diklik
-intervalId = setInterval(async () => {
-  if (activeUser.value && mapPageRef.value) {
-    const docRef = doc(db, 'locations', activeUser.value.username)
-    const snapshot = await getDoc(docRef)
-    if (snapshot.exists()) {
-      const data = snapshot.data()
-      if (data.latitude && data.longitude) {
-        const updatedUser = {
-          username: data.username,
-          latitude: data.latitude,
-          longitude: data.longitude,
+  if (!username) {
+    // 🔴 Semua user
+    const colRef = collection(db, 'locations')
+    unsubscribe = onSnapshot(colRef, (snapshot) => {
+      console.log('🔥 Firestore Realtime Connected (ALL)')
+      users.value = snapshot.docs.map(doc => {
+        const data = doc.data()
+        return {
+          username: doc.id ?? 'NO USERNAME',
+          latitude: data.Latitude,
+          longitude: data.Longitude,
           triggered: data.triggered
         }
-        mapPageRef.value.setLocation(updatedUser)
-      } else {
-        console.log('Data latitude / longitude kosong:', data)
+      }).filter(item => item.username)
+
+      const user = users.value?.find(item => item.triggered)
+      if (user && user.latitude && user.longitude) {
+        mapPageRef.value.setLocation(user)
       }
-    }
+
+      console.log('🔥 Firestore Realtime Updated:', users.value)
+    })
+  } else {
+    // 🔵 1 user spesifik
+    const docRef = doc(db, 'locations', username)
+    unsubscribe = onSnapshot(docRef, (docSnap) => {
+      console.log('🔥 Firestore Realtime Connected (USER)', username)
+      const data = docSnap.data()
+      if (!data) return
+      const user = {
+        username: username,
+        latitude: data.Latitude,
+        longitude: data.Longitude,
+        triggered: data.triggered
+      }
+      users.value = [user]
+      mapPageRef.value.setLocation(user)
+      console.log('🔥 Firestore Realtime Updated:', user)
+    })
   }
-}, 5000)
+}
 
+const stopRealtime = () => {
+  if (unsubscribe) {
+    unsubscribe()
+    unsubscribe = null
+    console.log('⛔ Realtime Disabled')
+  }
+}
 
+onMounted(() => {
+  startRealtime() // ✅ default: semua user
 })
 
 onBeforeUnmount(() => {
-  if (intervalId) clearInterval(intervalId)
+  stopRealtime()
 })
 
-
-
-// 🖱️ Saat klik user, aktifkan user itu
-async function handleClickUser(user) {
-  try {
-    if (!user.latitude || !user.longitude) return
-    const docRef = doc(db, 'locations', user.username)
-    await updateDoc(docRef, { Triggered: true })
-    activeUser.value = user
-    mapPageRef.value.setLocation(user)
-  } catch (error) {
-    console.log('error click', error)
+watch(is_realtime, (val) => {
+  if (val) {
+    startRealtime()
+  } else {
+    stopRealtime()
   }
+})
+
+function handleClickUser(user) {
+  if (!user.latitude || !user.longitude) return
+  stopRealtime()
+  startRealtime(user.username)
 }
 
-
-
 </script>
+
+
 
 <template>
   <div class="flex h-screen">
     <!-- Sidebar User List -->
     <div class="w-64 flex flex-col border-r">
       <h2 class="font-bold text-lg p-4 border-b">List User</h2>
+      <div class="p-2">
+        <button
+          class="px-4 py-2 bg-blue-500 text-white rounded mb-4"
+          @click="is_realtime = !is_realtime"
+        >
+          {{ is_realtime ? '🔴 Realtime ON' : '⚪ Realtime OFF' }}
+        </button>
+      </div>
       <div class="overflow-auto flex-grow">
         <ul>
           <li 
-          
             v-for="user in users" 
             :key="user.username" 
             @click="handleClickUser(user)"
