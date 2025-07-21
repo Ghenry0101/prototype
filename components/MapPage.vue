@@ -24,7 +24,7 @@ onMounted(async () => {
       .bindPopup('Jakarta')
   }
   try {
-  const testRef = doc(db, 'locations')
+  const testRef = doc(db, 'locations', 'userId')
   const snapshot = await getDoc(testRef)
   if (snapshot.exists()) {
     console.log('✅ Firebase Firestore Connected. Data:', snapshot.data())
