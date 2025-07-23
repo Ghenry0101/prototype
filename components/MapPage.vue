@@ -1,12 +1,12 @@
 <template>
-  <div id="map" style="height: 500px;"></div>
+  <div id="map" style="height: 500px; width: 100%"></div>
 </template>
 
 <script setup>
 import { ref, onMounted, defineExpose } from 'vue'
 import 'leaflet/dist/leaflet.css'
 import { doc, getDoc } from 'firebase/firestore'
-import { db } from '@/services/firebase' // atau path sesuai punyamu
+import { db } from '@/services/firebase'
 
 
 let map = ref(null)
@@ -37,13 +37,13 @@ onMounted(async () => {
 
 })
 
-// Method ini buat dipanggil dari luar komponen
+
 
 function setLocation(location) {
   if (!map) return
   marker.value.setLatLng([location.latitude, location.longitude]).bindPopup(location.username)
 
-  map.setView([location.latitude, location.longitude], 16)
+  map.setView([location.latitude, location.longitude], 19)
 }
 defineExpose({ setLocation })
 </script>

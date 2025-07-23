@@ -6,10 +6,12 @@ import { getFirestore, doc, updateDoc } from 'firebase/firestore';
 const firebaseConfig = {
   apiKey: "AIzaSyDz0JFiuq5sYcUUIHRxR_Fb7nNZRGDqdk8",
   authDomain: "locator-dccf6.firebaseapp.com",
+  databaseURL: "https://locator-dccf6-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "locator-dccf6",
-  storageBucket: "locator-dccf6.appspot.com",
+  storageBucket: "locator-dccf6.firebasestorage.app",
   messagingSenderId: "637860668160",
-  appId: "1:637860668160:web:b5ec092372e2812f99c9e5"
+  appId: "1:637860668160:web:b5ec092372e2812f99c9e5",
+  measurementId: "G-8CN84BCJCD"
 };
 
 // Avoid re-initialize error
